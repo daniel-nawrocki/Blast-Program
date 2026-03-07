@@ -5,6 +5,7 @@ from pathlib import Path
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
+    QCheckBox,
     QComboBox,
     QDoubleSpinBox,
     QFormLayout,
@@ -13,6 +14,7 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QPushButton,
+    QScrollArea,
     QVBoxLayout,
     QWidget,
 )
@@ -240,14 +242,10 @@ class GassingCalculatorScreen(QWidget):
         self._hole_diameter_input = self._make_spin(0.0, 1000.0, 2, 4.5)
         self._hole_depth_input = self._make_spin(0.0, 10000.0, 2, 38.0)
 
-        self._wet_hole_combo = QComboBox()
-        self._wet_hole_combo.addItem("No", False)
-        self._wet_hole_combo.addItem("Yes", True)
-
-        self._alt_needed_combo = QComboBox()
-        self._alt_needed_combo.addItem("No", False)
-        self._alt_needed_combo.addItem("Yes", True)
+        self._wet_hole_check = QCheckBox("Wet Hole")
+        self._alt_needed_check = QCheckBox("Alt Diameter")
         self._alt_diameter_input = self._make_spin(0.0, 1000.0, 2, 5.75)
+        self._alt_needed_check.toggled.connect(self._on_alt_toggle)
 
         self._bottom_column_input = self._make_spin(0.0, 10000.0, 2, 29.0)
         self._mid_bot_column_input = self._make_spin(0.0, 10000.0, 2, 0.0)
@@ -279,13 +277,11 @@ class GassingCalculatorScreen(QWidget):
         grid.addWidget(self._hole_diameter_input, 2, 1)
         grid.addWidget(QLabel("Units"), 2, 2)
         grid.addWidget(self._units_combo, 2, 3)
-        grid.addWidget(QLabel("Wet Hole"), 2, 4)
-        grid.addWidget(self._wet_hole_combo, 2, 5)
+        grid.addWidget(self._wet_hole_check, 2, 4, 1, 2)
 
         grid.addWidget(QLabel("Hole Depth"), 3, 0)
         grid.addWidget(self._hole_depth_input, 3, 1)
-        grid.addWidget(QLabel("Alt Diameter"), 3, 2)
-        grid.addWidget(self._alt_needed_combo, 3, 3)
+        grid.addWidget(self._alt_needed_check, 3, 2, 1, 2)
         grid.addWidget(QLabel("Alt Diameter Value"), 3, 4)
         grid.addWidget(self._alt_diameter_input, 3, 5)
 
@@ -328,7 +324,7 @@ class GassingCalculatorScreen(QWidget):
         panel_layout.addLayout(action_row)
 
         chart_layout = QGridLayout()
-        chart_layout.setHorizontalSpacing(8)
+        chart_layout.setHorizontalSpacing(12)
         chart_layout.setVerticalSpacing(8)
 
         chart_layout.addWidget(QLabel("As Loaded"), 0, 0)
@@ -336,14 +332,20 @@ class GassingCalculatorScreen(QWidget):
         self._as_loaded_bar_layout = QHBoxLayout(self._as_loaded_bar)
         self._as_loaded_bar_layout.setContentsMargins(0, 0, 0, 0)
         self._as_loaded_bar_layout.setSpacing(2)
-        chart_layout.addWidget(self._as_loaded_bar, 0, 1)
+        chart_layout.addWidget(self._as_loaded_bar, 1, 0)
 
-        chart_layout.addWidget(QLabel("Final"), 1, 0)
+        chart_layout.addWidget(QLabel("Final"), 0, 1)
         self._final_bar = QWidget()
         self._final_bar_layout = QHBoxLayout(self._final_bar)
         self._final_bar_layout.setContentsMargins(0, 0, 0, 0)
         self._final_bar_layout.setSpacing(2)
         chart_layout.addWidget(self._final_bar, 1, 1)
+
+        chart_layout.addWidget(QLabel("Rise"), 0, 2)
+        self._rise_value_label = QLabel("0.00")
+        self._rise_value_label.setProperty("sheetOutput", True)
+        self._rise_value_label.setAlignment(Qt.AlignCenter)
+        chart_layout.addWidget(self._rise_value_label, 1, 2)
 
         panel_layout.addLayout(chart_layout)
 
@@ -361,7 +363,12 @@ class GassingCalculatorScreen(QWidget):
         self._status_label.setWordWrap(True)
         panel_layout.addWidget(self._status_label)
 
-        layout.addWidget(panel)
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.NoFrame)
+        scroll.setWidget(panel)
+
+        layout.addWidget(scroll)
         layout.addStretch()
 
         footer = QHBoxLayout()
@@ -370,6 +377,7 @@ class GassingCalculatorScreen(QWidget):
         layout.addLayout(footer)
 
         self._load_template_from_workbook()
+        self._on_alt_toggle(self._alt_needed_check.isChecked())
 
     def _make_spin(self, minimum: float, maximum: float, decimals: int, default: float) -> QDoubleSpinBox:
         spin = QDoubleSpinBox()
@@ -519,9 +527,13 @@ class GassingCalculatorScreen(QWidget):
 
         t3 = int(values.get("T3", 0) or 0)
         self._units_combo.setCurrentIndex(1 if t3 == 1 else 0)
-        self._wet_hole_combo.setCurrentIndex(1 if self._as_bool(values.get("O10", False)) else 0)
-        self._alt_needed_combo.setCurrentIndex(1 if self._as_bool(values.get("Q10", False)) else 0)
+        self._wet_hole_check.setChecked(self._as_bool(values.get("O10", False)))
+        self._alt_needed_check.setChecked(self._as_bool(values.get("Q10", False)))
+        self._on_alt_toggle(self._alt_needed_check.isChecked())
         self._status_label.setText(f"Workbook layout loaded. Formula cells: {len(self._formula_map)}")
+
+    def _on_alt_toggle(self, checked: bool) -> None:
+        self._alt_diameter_input.setEnabled(checked)
 
     @staticmethod
     def _as_bool(value) -> bool:
@@ -536,8 +548,8 @@ class GassingCalculatorScreen(QWidget):
     def _build_runtime_values(self):
         values = dict(self._template_values)
         values["T3"] = int(self._units_combo.currentData())
-        values["O10"] = bool(self._wet_hole_combo.currentData())
-        values["Q10"] = bool(self._alt_needed_combo.currentData())
+        values["O10"] = self._wet_hole_check.isChecked()
+        values["Q10"] = self._alt_needed_check.isChecked()
         values["P3"] = self._hole_diameter_input.value()
         values["C9"] = self._hole_depth_input.value()
         values["E8"] = self._alt_diameter_input.value()
@@ -601,25 +613,14 @@ class GassingCalculatorScreen(QWidget):
             seg.setToolTip(f"{labels[idx]}: {val:.4f}")
             chart_col_layout.addWidget(seg)
 
-        legend = QWidget()
-        legend_layout = QVBoxLayout(legend)
-        legend_layout.setContentsMargins(8, 0, 0, 0)
-        legend_layout.setSpacing(4)
-        for idx, val in enumerate(positive):
-            line = QLabel(f"{labels[idx]}: {val:.2f}")
-            line.setObjectName("bodyText")
-            legend_layout.addWidget(line)
-        legend_layout.addStretch()
-
         layout.addWidget(chart_col)
-        layout.addWidget(legend)
         layout.addStretch()
 
     def _calculate(self) -> None:
         values = self._build_runtime_values()
         runtime_formulas = dict(self._formula_map)
 
-        if not bool(self._alt_needed_combo.currentData()):
+        if not self._alt_needed_check.isChecked():
             runtime_formulas.pop("P3", None)
             values["P3"] = self._hole_diameter_input.value()
             values["Q10"] = False
@@ -670,7 +671,7 @@ class GassingCalculatorScreen(QWidget):
         for idx, col in enumerate(["C", "D", "E", "F"]):
             self._avg_density_labels[idx].setText(f"{self._as_float(values.get(f'{col}16', 0.0)):.4f}")
             self._bottom_density_labels[idx].setText(f"{self._as_float(values.get(f'{col}17', 0.0)):.4f}")
-            self._pounds_labels[idx].setText(f"{self._as_float(values.get(f'{col}19', 0.0)):.4f}")
+            self._pounds_labels[idx].setText(f"{round(self._as_float(values.get(f'{col}19', 0.0)))}")
 
         as_loaded_values = [
             self._as_float(values.get("U20", 0.0)),
@@ -728,6 +729,8 @@ class GassingCalculatorScreen(QWidget):
         final_labels = ["Bottom", "Mid-Bot", "Mid-Top", "Top", "Unloaded Collar"]
         self._draw_stacked_bar(self._as_loaded_bar_layout, as_loaded_values, colors, as_loaded_labels)
         self._draw_stacked_bar(self._final_bar_layout, final_values, colors, final_labels)
+        rise = as_loaded_values[4] - final_values[4]
+        self._rise_value_label.setText(f"{rise:.2f}")
         self._as_loaded_bar.update()
         self._final_bar.update()
 

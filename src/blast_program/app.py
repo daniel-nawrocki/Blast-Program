@@ -9,4 +9,7 @@ def run() -> int:
     app = QApplication(sys.argv)
     window = MainWindow()
     window.show()
-    return app.exec()
+    try:
+        return app.exec()
+    except KeyboardInterrupt:
+        return 0
