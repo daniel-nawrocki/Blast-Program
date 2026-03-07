@@ -1,6 +1,12 @@
 from PySide6.QtWidgets import QMainWindow, QStackedWidget
 
-from blast_program.ui.screens import PlaceholderScreen, StartScreen
+from blast_program.ui.screens import (
+    PlaceholderScreen,
+    SiteFactorCalibratorScreen,
+    StartScreen,
+    VibrationCalculatorScreen,
+    VibrationToolScreen,
+)
 
 
 class MainWindow(QMainWindow):
@@ -95,21 +101,14 @@ class MainWindow(QMainWindow):
 
     def _build_screens(self) -> None:
         self._register_screen("start", StartScreen(self.navigate_to))
+        self._register_screen("vibration_tool", VibrationToolScreen(self.navigate_to, self.navigate_home))
         self._register_screen(
-            "vibration_estimate",
-            PlaceholderScreen(
-                "Vibration Estimate",
-                "Section scaffolded. We will implement formulas, inputs, and results in a later section.",
-                self.navigate_home,
-            ),
+            "vibration_calculator",
+            VibrationCalculatorScreen(lambda: self.navigate_to("vibration_tool")),
         )
         self._register_screen(
-            "timing_solver",
-            PlaceholderScreen(
-                "Timing Solver",
-                "Section scaffolded. We will implement timing calculation logic in a later section.",
-                self.navigate_home,
-            ),
+            "site_factor_calibrator",
+            SiteFactorCalibratorScreen(lambda: self.navigate_to("vibration_tool")),
         )
         self._register_screen(
             "empirical_formula",
