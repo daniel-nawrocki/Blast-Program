@@ -1,4 +1,5 @@
 import math
+import os
 from pathlib import Path
 import zipfile
 import xml.etree.ElementTree as ET
@@ -20,6 +21,18 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
+DEFAULT_WORKBOOK_PATH = Path(
+    os.environ.get(
+        "BLAST_WORKBOOK_PATH",
+        str(PROJECT_ROOT / "assets" / "workbooks" / "Diff Gassing Titan XL Blends, 02 October 2012, Final.xlsm"),
+    )
+)
+REFERENCE_FILES = [
+    ("Empirical Cheat Sheet", PROJECT_ROOT / "assets" / "references" / "Empirical Cheat Sheet.docx"),
+    ("Open Pit Book", PROJECT_ROOT / "assets" / "references" / "Open Pit Book.pdf"),
+]
 
 
 def _create_header(title_text: str, subtitle_text: str) -> QWidget:
@@ -365,20 +378,9 @@ class ReferencesScreen(QWidget):
         self._status_label.setObjectName("bodyText")
         self._status_label.setWordWrap(True)
 
-        references = [
-            (
-                "Empirical Cheat Sheet",
-                r"c:\Users\danie\OneDrive\Desktop\Work Files\Empirical Cheat Sheet.docx",
-            ),
-            (
-                "Open Pit Book",
-                r"c:\Users\danie\OneDrive\Desktop\Work Files\Open Pit Book.pdf",
-            ),
-        ]
-
-        for label, file_path in references:
+        for label, file_path in REFERENCE_FILES:
             button = QPushButton(label)
-            button.clicked.connect(lambda _, p=file_path: self._open_reference(p))
+            button.clicked.connect(lambda _, p=file_path: self._open_reference(str(p)))
             panel_layout.addWidget(button)
 
         panel_layout.addWidget(self._status_label)
@@ -405,7 +407,7 @@ class ReferencesScreen(QWidget):
 
 
 class GassingCalculatorScreen(QWidget):
-    WORKBOOK_PATH = Path(r"c:\Users\danie\Downloads\Diff Gassing Titan XL Blends, 02 October 2012, Final.xlsm")
+    WORKBOOK_PATH = DEFAULT_WORKBOOK_PATH
     SHEET_PATH = "xl/worksheets/sheet1.xml"
     SHARED_STRINGS_PATH = "xl/sharedStrings.xml"
     GRID_COLS = [chr(c) for c in range(ord("B"), ord("W") + 1)]
@@ -616,7 +618,7 @@ class GassingCalculatorScreen(QWidget):
                     self._sheet_table.item(row_idx, col_idx).setText(str(value))
 
         self._sync_units_cell()
-        self._status_label.setText("Workbook layout loaded.")
+        self._status_label.setText("")
 
     def _sync_units_cell(self) -> None:
         self._set_cell_text("T3", str(int(self._units_combo.currentData())))

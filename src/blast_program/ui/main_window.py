@@ -41,7 +41,7 @@ class MainWindow(QMainWindow):
                 letter-spacing: 0.2px;
             }
             QLabel#pageSubtitle {
-                color: #4a5568;
+                color: #1a202c;
                 font-size: 14px;
                 line-height: 1.35em;
             }

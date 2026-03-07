@@ -1,6 +1,7 @@
 import re
 import zipfile
 import xml.etree.ElementTree as ET
+import os
 from pathlib import Path
 
 from PySide6.QtCore import Qt
@@ -206,7 +207,13 @@ class _FormulaParser:
 
 
 class GassingCalculatorScreen(QWidget):
-    WORKBOOK_PATH = Path(r"c:\Users\danie\Downloads\Diff Gassing Titan XL Blends, 02 October 2012, Final.xlsm")
+    PROJECT_ROOT = Path(__file__).resolve().parents[3]
+    WORKBOOK_PATH = Path(
+        os.environ.get(
+            "BLAST_WORKBOOK_PATH",
+            str(PROJECT_ROOT / "assets" / "workbooks" / "Diff Gassing Titan XL Blends, 02 October 2012, Final.xlsm"),
+        )
+    )
     SHEET_PATH = "xl/worksheets/sheet1.xml"
     SHARED_STRINGS_PATH = "xl/sharedStrings.xml"
 
@@ -215,6 +222,7 @@ class GassingCalculatorScreen(QWidget):
         self._navigate_home = navigate_home
         self._template_values = {}
         self._formula_map = {}
+        self._chart_compact = None
         self._build_ui()
 
     def _build_ui(self) -> None:
@@ -247,71 +255,70 @@ class GassingCalculatorScreen(QWidget):
         self._alt_diameter_input = self._make_spin(0.0, 1000.0, 2, 5.75)
         self._alt_needed_check.toggled.connect(self._on_alt_toggle)
 
-        self._bottom_column_input = self._make_spin(0.0, 10000.0, 2, 29.0)
-        self._mid_bot_column_input = self._make_spin(0.0, 10000.0, 2, 0.0)
-        self._mid_top_column_input = self._make_spin(0.0, 10000.0, 2, 0.0)
-        self._top_column_input = self._make_spin(0.0, 10000.0, 2, 0.0)
+        self._bottom_column_input = self._make_spin(0.0, 10000.0, 0, 29.0)
+        self._mid_bot_column_input = self._make_spin(0.0, 10000.0, 0, 0.0)
+        self._mid_top_column_input = self._make_spin(0.0, 10000.0, 0, 0.0)
+        self._top_column_input = self._make_spin(0.0, 10000.0, 0, 0.0)
 
-        self._bottom_density_input = self._make_spin(0.0, 5.0, 3, 1.1)
-        self._mid_bot_density_input = self._make_spin(0.0, 5.0, 3, 0.0)
-        self._mid_top_density_input = self._make_spin(0.0, 5.0, 3, 0.0)
-        self._top_density_input = self._make_spin(0.0, 5.0, 3, 0.0)
+        self._bottom_density_input = self._make_spin(0.0, 5.0, 2, 1.1)
+        self._mid_bot_density_input = self._make_spin(0.0, 5.0, 2, 0.0)
+        self._mid_top_density_input = self._make_spin(0.0, 5.0, 2, 0.0)
+        self._top_density_input = self._make_spin(0.0, 5.0, 2, 0.0)
 
         # Spreadsheet-like grid
         grid = QGridLayout()
         grid.setHorizontalSpacing(8)
         grid.setVerticalSpacing(6)
+        grid.setColumnStretch(0, 2)
+        grid.setColumnStretch(1, 1)
+        grid.setColumnStretch(2, 1)
+        grid.setColumnStretch(3, 1)
+        grid.setColumnStretch(4, 1)
+        grid.setColumnStretch(5, 1)
 
         title = QLabel("Titan Calculator (Differential Energy)")
         title.setObjectName("pageSubtitle")
         grid.addWidget(title, 0, 0, 1, 6)
 
-        grid.addWidget(QLabel(""), 1, 0)
-        for idx, col in enumerate(["C", "D", "E", "F"], start=1):
-            col_label = QLabel(col)
-            col_label.setAlignment(Qt.AlignCenter)
-            col_label.setProperty("sheetHeader", True)
-            grid.addWidget(col_label, 1, idx)
+        grid.addWidget(QLabel("Hole Diameter"), 1, 0)
+        grid.addWidget(self._hole_diameter_input, 1, 1)
+        grid.addWidget(QLabel("Units"), 1, 2)
+        grid.addWidget(self._units_combo, 1, 3)
+        grid.addWidget(self._wet_hole_check, 1, 4, 1, 2)
 
-        grid.addWidget(QLabel("Hole Diameter"), 2, 0)
-        grid.addWidget(self._hole_diameter_input, 2, 1)
-        grid.addWidget(QLabel("Units"), 2, 2)
-        grid.addWidget(self._units_combo, 2, 3)
-        grid.addWidget(self._wet_hole_check, 2, 4, 1, 2)
+        grid.addWidget(QLabel("Hole Depth"), 2, 0)
+        grid.addWidget(self._hole_depth_input, 2, 1)
+        grid.addWidget(self._alt_needed_check, 2, 2, 1, 2)
+        grid.addWidget(QLabel("Alt Diameter Value"), 2, 4)
+        grid.addWidget(self._alt_diameter_input, 2, 5)
 
-        grid.addWidget(QLabel("Hole Depth"), 3, 0)
-        grid.addWidget(self._hole_depth_input, 3, 1)
-        grid.addWidget(self._alt_needed_check, 3, 2, 1, 2)
-        grid.addWidget(QLabel("Alt Diameter Value"), 3, 4)
-        grid.addWidget(self._alt_diameter_input, 3, 5)
+        grid.addWidget(QLabel("Explosive Column"), 3, 0)
+        grid.addWidget(self._bottom_column_input, 3, 1)
+        grid.addWidget(self._mid_bot_column_input, 3, 2)
+        grid.addWidget(self._mid_top_column_input, 3, 3)
+        grid.addWidget(self._top_column_input, 3, 4)
 
-        grid.addWidget(QLabel("Explosive Column"), 4, 0)
-        grid.addWidget(self._bottom_column_input, 4, 1)
-        grid.addWidget(self._mid_bot_column_input, 4, 2)
-        grid.addWidget(self._mid_top_column_input, 4, 3)
-        grid.addWidget(self._top_column_input, 4, 4)
-
-        grid.addWidget(QLabel("Cup Density"), 5, 0)
-        grid.addWidget(self._bottom_density_input, 5, 1)
-        grid.addWidget(self._mid_bot_density_input, 5, 2)
-        grid.addWidget(self._mid_top_density_input, 5, 3)
-        grid.addWidget(self._top_density_input, 5, 4)
+        grid.addWidget(QLabel("Cup Density"), 4, 0)
+        grid.addWidget(self._bottom_density_input, 4, 1)
+        grid.addWidget(self._mid_bot_density_input, 4, 2)
+        grid.addWidget(self._mid_top_density_input, 4, 3)
+        grid.addWidget(self._top_density_input, 4, 4)
 
         self._avg_density_labels = [self._output_label() for _ in range(4)]
         self._bottom_density_labels = [self._output_label() for _ in range(4)]
         self._pounds_labels = [self._output_label() for _ in range(4)]
 
-        grid.addWidget(QLabel("Ave Density"), 6, 0)
+        grid.addWidget(QLabel("Ave Density"), 5, 0)
         for i, lbl in enumerate(self._avg_density_labels, start=1):
+            grid.addWidget(lbl, 5, i)
+
+        grid.addWidget(QLabel("Bottom Density"), 6, 0)
+        for i, lbl in enumerate(self._bottom_density_labels, start=1):
             grid.addWidget(lbl, 6, i)
 
-        grid.addWidget(QLabel("Bottom Density"), 7, 0)
-        for i, lbl in enumerate(self._bottom_density_labels, start=1):
-            grid.addWidget(lbl, 7, i)
-
-        grid.addWidget(QLabel("Pounds to load"), 8, 0)
+        grid.addWidget(QLabel("Pounds to load"), 7, 0)
         for i, lbl in enumerate(self._pounds_labels, start=1):
-            grid.addWidget(lbl, 8, i)
+            grid.addWidget(lbl, 7, i)
 
         panel_layout.addLayout(grid)
 
@@ -323,58 +330,56 @@ class GassingCalculatorScreen(QWidget):
         action_row.addStretch()
         panel_layout.addLayout(action_row)
 
-        chart_layout = QGridLayout()
-        chart_layout.setHorizontalSpacing(12)
-        chart_layout.setVerticalSpacing(8)
-
-        chart_layout.addWidget(QLabel("As Loaded"), 0, 0)
-        self._as_loaded_bar = QWidget()
-        self._as_loaded_bar_layout = QHBoxLayout(self._as_loaded_bar)
-        self._as_loaded_bar_layout.setContentsMargins(0, 0, 0, 0)
-        self._as_loaded_bar_layout.setSpacing(2)
-        chart_layout.addWidget(self._as_loaded_bar, 1, 0)
-
-        chart_layout.addWidget(QLabel("Final"), 0, 1)
-        self._final_bar = QWidget()
-        self._final_bar_layout = QHBoxLayout(self._final_bar)
-        self._final_bar_layout.setContentsMargins(0, 0, 0, 0)
-        self._final_bar_layout.setSpacing(2)
-        chart_layout.addWidget(self._final_bar, 1, 1)
-
-        chart_layout.addWidget(QLabel("Rise"), 0, 2)
-        self._rise_value_label = QLabel("0.00")
-        self._rise_value_label.setProperty("sheetOutput", True)
-        self._rise_value_label.setAlignment(Qt.AlignCenter)
-        chart_layout.addWidget(self._rise_value_label, 1, 2)
-
-        panel_layout.addLayout(chart_layout)
-
         calc_btn = QPushButton("Run Gassing Calculation")
         calc_btn.clicked.connect(self._calculate)
         panel_layout.addWidget(calc_btn)
 
-        self._result_label = QLabel("Run calculation to update outputs and bars.")
+        self._result_label = QLabel("")
         self._result_label.setObjectName("bodyText")
         self._result_label.setWordWrap(True)
         panel_layout.addWidget(self._result_label)
 
-        self._status_label = QLabel("Native mode active.")
+        self._status_label = QLabel("")
         self._status_label.setObjectName("bodyText")
         self._status_label.setWordWrap(True)
         panel_layout.addWidget(self._status_label)
+
+        self._chart_layout = QGridLayout()
+        self._chart_layout.setHorizontalSpacing(12)
+        self._chart_layout.setVerticalSpacing(8)
+
+        self._as_loaded_title = QLabel("As Loaded")
+        self._as_loaded_bar = QWidget()
+        self._as_loaded_bar_layout = QHBoxLayout(self._as_loaded_bar)
+        self._as_loaded_bar_layout.setContentsMargins(0, 0, 0, 0)
+        self._as_loaded_bar_layout.setSpacing(2)
+
+        self._final_title = QLabel("Final")
+        self._final_bar = QWidget()
+        self._final_bar_layout = QHBoxLayout(self._final_bar)
+        self._final_bar_layout.setContentsMargins(0, 0, 0, 0)
+        self._final_bar_layout.setSpacing(2)
+
+        self._rise_title = QLabel("Rise")
+        self._rise_value_label = QLabel("0.00")
+        self._rise_value_label.setProperty("sheetOutput", True)
+        self._rise_value_label.setAlignment(Qt.AlignCenter)
+        self._reflow_chart_layout(compact=self.width() < 980)
+
+        panel_layout.addLayout(self._chart_layout)
 
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setFrameShape(QFrame.NoFrame)
         scroll.setWidget(panel)
 
-        layout.addWidget(scroll)
-        layout.addStretch()
+        layout.addWidget(scroll, 1)
 
         footer = QHBoxLayout()
         footer.addWidget(_create_back_button("Back to Start Screen", self._navigate_home))
         footer.addStretch()
         layout.addLayout(footer)
+        layout.setStretch(1, 1)
 
         self._load_template_from_workbook()
         self._on_alt_toggle(self._alt_needed_check.isChecked())
@@ -389,10 +394,39 @@ class GassingCalculatorScreen(QWidget):
         return spin
 
     def _output_label(self) -> QLabel:
-        label = QLabel("0.0000")
+        label = QLabel("")
         label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
-        label.setProperty("sheetOutput", True)
         return label
+
+    def _reflow_chart_layout(self, compact: bool) -> None:
+        if self._chart_compact == compact:
+            return
+        self._chart_compact = compact
+
+        while self._chart_layout.count():
+            child = self._chart_layout.takeAt(0)
+            widget = child.widget()
+            if widget is not None:
+                widget.setParent(None)
+
+        if compact:
+            self._chart_layout.addWidget(self._as_loaded_title, 0, 0)
+            self._chart_layout.addWidget(self._as_loaded_bar, 1, 0)
+            self._chart_layout.addWidget(self._final_title, 2, 0)
+            self._chart_layout.addWidget(self._final_bar, 3, 0)
+            self._chart_layout.addWidget(self._rise_title, 4, 0)
+            self._chart_layout.addWidget(self._rise_value_label, 5, 0)
+        else:
+            self._chart_layout.addWidget(self._as_loaded_title, 0, 0)
+            self._chart_layout.addWidget(self._as_loaded_bar, 1, 0)
+            self._chart_layout.addWidget(self._final_title, 0, 1)
+            self._chart_layout.addWidget(self._final_bar, 1, 1)
+            self._chart_layout.addWidget(self._rise_title, 0, 2)
+            self._chart_layout.addWidget(self._rise_value_label, 1, 2)
+
+    def resizeEvent(self, event) -> None:
+        super().resizeEvent(event)
+        self._reflow_chart_layout(compact=self.width() < 980)
 
     @staticmethod
     def _col_to_num(col: str) -> int:
@@ -530,7 +564,7 @@ class GassingCalculatorScreen(QWidget):
         self._wet_hole_check.setChecked(self._as_bool(values.get("O10", False)))
         self._alt_needed_check.setChecked(self._as_bool(values.get("Q10", False)))
         self._on_alt_toggle(self._alt_needed_check.isChecked())
-        self._status_label.setText(f"Workbook layout loaded. Formula cells: {len(self._formula_map)}")
+        self._status_label.setText("")
 
     def _on_alt_toggle(self, checked: bool) -> None:
         self._alt_diameter_input.setEnabled(checked)
@@ -669,8 +703,8 @@ class GassingCalculatorScreen(QWidget):
             get_cell(ref)
 
         for idx, col in enumerate(["C", "D", "E", "F"]):
-            self._avg_density_labels[idx].setText(f"{self._as_float(values.get(f'{col}16', 0.0)):.4f}")
-            self._bottom_density_labels[idx].setText(f"{self._as_float(values.get(f'{col}17', 0.0)):.4f}")
+            self._avg_density_labels[idx].setText(f"{self._as_float(values.get(f'{col}16', 0.0)):.2f}")
+            self._bottom_density_labels[idx].setText(f"{self._as_float(values.get(f'{col}17', 0.0)):.2f}")
             self._pounds_labels[idx].setText(f"{round(self._as_float(values.get(f'{col}19', 0.0)))}")
 
         as_loaded_values = [
@@ -734,11 +768,20 @@ class GassingCalculatorScreen(QWidget):
         self._as_loaded_bar.update()
         self._final_bar.update()
 
+        hole_avg_density = self._as_float(values.get("G20", 0.0))
+        if hole_avg_density == 0.0:
+            lengths = [self._as_float(values.get(f"{col}13", 0.0)) for col in ["C", "D", "E", "F"]]
+            densities = [self._as_float(values.get(f"{col}16", 0.0)) for col in ["C", "D", "E", "F"]]
+            total_length = sum(lengths)
+            if total_length > 0:
+                hole_avg_density = sum(l * d for l, d in zip(lengths, densities)) / total_length
+
+        total_pounds = self._as_float(values.get("G19", 0.0))
+        if total_pounds == 0.0:
+            total_pounds = sum(self._as_float(values.get(f"{col}19", 0.0)) for col in ["C", "D", "E", "F"])
+
         self._result_label.setText(
-            f"G19: {float(values.get('G19', 0.0)):.4f}\n"
-            f"G20: {float(values.get('G20', 0.0)):.4f}\n"
-            f"P28: {float(values.get('P28', 0.0)):.4f}\n"
-            f"Q3: {float(values.get('Q3', 0.0)):.4f}\n"
-            f"R62: {float(values.get('R62', 0.0)):.4f}"
+            f"Hole Average Density: {hole_avg_density:.2f}\n"
+            f"Total Pounds for Hole: {total_pounds:.2f}"
         )
-        self._status_label.setText(f"Calculation complete (evaluated {len(runtime_formulas)} formulas).")
+        self._status_label.setText("")
