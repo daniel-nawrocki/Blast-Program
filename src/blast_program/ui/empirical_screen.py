@@ -4,6 +4,7 @@ from PySide6.QtWidgets import (
     QComboBox,
     QDoubleSpinBox,
     QFormLayout,
+    QGridLayout,
     QHBoxLayout,
     QLabel,
     QPushButton,
@@ -33,9 +34,18 @@ class EmpiricalFormulaScreen(QWidget):
 
         panel = QWidget()
         panel.setObjectName("contentPanel")
-        panel_layout = QVBoxLayout(panel)
+        panel_layout = QHBoxLayout(panel)
         panel_layout.setContentsMargins(18, 16, 18, 16)
-        panel_layout.setSpacing(12)
+        panel_layout.setSpacing(16)
+
+        inputs_col = QWidget()
+        inputs_layout = QVBoxLayout(inputs_col)
+        inputs_layout.setContentsMargins(0, 0, 0, 0)
+        inputs_layout.setSpacing(10)
+
+        inputs_title = QLabel("Inputs")
+        inputs_title.setObjectName("pageSubtitle")
+        inputs_layout.addWidget(inputs_title)
 
         form = QFormLayout()
         form.setHorizontalSpacing(16)
@@ -59,29 +69,70 @@ class EmpiricalFormulaScreen(QWidget):
         self._pattern_type = QComboBox()
         self._pattern_type.addItems(["Square", "Rectangular"])
 
-        self._initiation = QComboBox()
-        self._initiation.addItems(["Top and Bottom", "Bottom"])
-
         form.addRow("Rock Type", self._rock_type)
         form.addRow("Face Height", self._face_height)
         form.addRow("Hole Diameter Dh", self._dh)
         form.addRow("Pattern Type", self._pattern_type)
-        form.addRow("Initiation", self._initiation)
-        panel_layout.addLayout(form)
+        inputs_layout.addLayout(form)
 
         calc_button = QPushButton("Calculate Empirical Outputs")
         calc_button.clicked.connect(self._calculate)
-        panel_layout.addWidget(calc_button)
+        inputs_layout.addWidget(calc_button)
 
         self._warning_label = QLabel("")
         self._warning_label.setObjectName("bodyText")
         self._warning_label.setWordWrap(True)
-        panel_layout.addWidget(self._warning_label)
+        inputs_layout.addWidget(self._warning_label)
+        inputs_layout.addStretch()
 
-        self._results_label = QLabel("Run calculation to view burden, spacing, and stemming.")
-        self._results_label.setObjectName("bodyText")
-        self._results_label.setWordWrap(True)
-        panel_layout.addWidget(self._results_label)
+        results_col = QWidget()
+        results_layout = QVBoxLayout(results_col)
+        results_layout.setContentsMargins(0, 0, 0, 0)
+        results_layout.setSpacing(10)
+
+        results_title = QLabel("Results")
+        results_title.setObjectName("pageSubtitle")
+        results_layout.addWidget(results_title)
+
+        hero_grid = QGridLayout()
+        hero_grid.setHorizontalSpacing(18)
+        hero_grid.setVerticalSpacing(4)
+        self._burden_value = QLabel("--")
+        self._burden_value.setObjectName("pageTitle")
+        self._spacing_value = QLabel("--")
+        self._spacing_value.setObjectName("pageTitle")
+        hero_grid.addWidget(QLabel("Burden B (ft)"), 0, 0)
+        hero_grid.addWidget(QLabel("Spacing S (ft)"), 0, 1)
+        hero_grid.addWidget(self._burden_value, 1, 0)
+        hero_grid.addWidget(self._spacing_value, 1, 1)
+        results_layout.addLayout(hero_grid)
+
+        details_grid = QGridLayout()
+        details_grid.setHorizontalSpacing(14)
+        details_grid.setVerticalSpacing(6)
+        self._ratio_value = QLabel("--")
+        self._band_value = QLabel("--")
+        self._constant_value = QLabel("--")
+        self._pf_value = QLabel("--")
+        self._subdrill_value = QLabel("--")
+        self._stemming_value = QLabel("--")
+        details_grid.addWidget(QLabel("R = Height / Dh"), 0, 0)
+        details_grid.addWidget(self._ratio_value, 0, 1)
+        details_grid.addWidget(QLabel("Band"), 1, 0)
+        details_grid.addWidget(self._band_value, 1, 1)
+        details_grid.addWidget(QLabel("Empirical Constant"), 2, 0)
+        details_grid.addWidget(self._constant_value, 2, 1)
+        details_grid.addWidget(QLabel("Pattern Footage (PF)"), 3, 0)
+        details_grid.addWidget(self._pf_value, 3, 1)
+        details_grid.addWidget(QLabel("Subdrill J (0.30B)"), 4, 0)
+        details_grid.addWidget(self._subdrill_value, 4, 1)
+        details_grid.addWidget(QLabel("Stemming (Top and Bottom)"), 5, 0)
+        details_grid.addWidget(self._stemming_value, 5, 1)
+        results_layout.addLayout(details_grid)
+        results_layout.addStretch()
+
+        panel_layout.addWidget(inputs_col, 1)
+        panel_layout.addWidget(results_col, 1)
 
         layout.addWidget(panel)
         layout.addStretch()
@@ -113,21 +164,26 @@ class EmpiricalFormulaScreen(QWidget):
         return 0.85 if rock_type == "Granite/Hard Limestone" else 0.93
 
     @staticmethod
-    def _stemming_k(initiation: str, band: str) -> float:
+    def _stemming_k(band: str) -> float:
         if band == "E":
             return 0.70
-        return 0.50 if initiation == "Bottom" else 0.70
+        return 0.70
 
     def _calculate(self) -> None:
         rock_type = self._rock_type.currentText()
         face_height = self._face_height.value()
         dh = self._dh.value()
         pattern_type = self._pattern_type.currentText()
-        initiation = self._initiation.currentText()
-
         if dh <= 0.0 or face_height <= 0.0:
             self._warning_label.setText("Face height and Dh must be greater than 0.")
-            self._results_label.setText("Enter valid inputs, then run calculation.")
+            self._burden_value.setText("--")
+            self._spacing_value.setText("--")
+            self._ratio_value.setText("--")
+            self._band_value.setText("--")
+            self._constant_value.setText("--")
+            self._pf_value.setText("--")
+            self._subdrill_value.setText("--")
+            self._stemming_value.setText("--")
             return
 
         ratio_r = face_height / dh
@@ -137,20 +193,18 @@ class EmpiricalFormulaScreen(QWidget):
         burden = base if pattern_type == "Square" else self._rectangular_k(rock_type) * base
         spacing = pattern_footage / burden if burden > 0 else 0.0
         subdrill = 0.30 * burden
-        stemming = self._stemming_k(initiation, band) * burden
+        stemming = self._stemming_k(band) * burden
 
         self._warning_label.setText(
             "Ratio below empirical table range; Band E used as fallback."
             if ratio_below_range
             else ""
         )
-        self._results_label.setText(
-            f"Burden B: {burden:.3f} ft\n"
-            f"Spacing S: {spacing:.3f} ft\n"
-            f"Subdrill J (0.30B): {subdrill:.3f} ft\n"
-            f"Stemming: {stemming:.3f} ft\n"
-            f"R = Height / Dh: {ratio_r:.3f}\n"
-            f"Band: {band}\n"
-            f"Empirical Constant: {constant}\n"
-            f"Pattern Footage (PF): {pattern_footage:.3f} ft^2"
-        )
+        self._burden_value.setText(f"{burden:.3f}")
+        self._spacing_value.setText(f"{spacing:.3f}")
+        self._ratio_value.setText(f"{ratio_r:.3f}")
+        self._band_value.setText(band)
+        self._constant_value.setText(str(constant))
+        self._pf_value.setText(f"{pattern_footage:.3f} ft^2")
+        self._subdrill_value.setText(f"{subdrill:.3f} ft")
+        self._stemming_value.setText(f"{stemming:.3f} ft")
