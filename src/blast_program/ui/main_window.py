@@ -2,6 +2,7 @@ from PySide6.QtWidgets import QMainWindow, QStackedWidget
 
 from blast_program.ui.screens import (
     PlaceholderScreen,
+    ReferencesScreen,
     SiteFactorCalibratorScreen,
     StartScreen,
     VibrationCalculatorScreen,
@@ -128,11 +129,7 @@ class MainWindow(QMainWindow):
         )
         self._register_screen(
             "quick_cheat_sheets",
-            PlaceholderScreen(
-                "Small Quick Cheat Sheets",
-                "Section scaffolded. We will connect this to Cheat Sheets / Knowledge content in the next section.",
-                self.navigate_home,
-            ),
+            ReferencesScreen(self.navigate_home),
         )
 
     def _register_screen(self, key: str, widget) -> None:

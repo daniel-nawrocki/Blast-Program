@@ -1,5 +1,8 @@
 import math
+from pathlib import Path
 
+from PySide6.QtCore import QUrl
+from PySide6.QtGui import QDesktopServices
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QDoubleSpinBox,
@@ -75,7 +78,7 @@ class StartScreen(QWidget):
                 ("vibration_tool", "Vibration Tool", "Calculator and site-factor workflows."),
                 ("empirical_formula", "Empirical Formula", "Calculate formula from composition inputs."),
                 ("diagram_maker", "Diagram Maker", "Build and export process diagrams."),
-                ("quick_cheat_sheets", "Quick Cheat Sheets", "Open compact references and key values."),
+                ("quick_cheat_sheets", "References/Cheat Sheets", "Open compact references and key values."),
             ]
         ):
             button = _create_card_button(
@@ -326,6 +329,72 @@ class SiteFactorCalibratorScreen(QWidget):
 
         adjusted = current * (actual / expected)
         self._result_label.setText(f"Adjusted factor: {round(adjusted)}")
+
+
+class ReferencesScreen(QWidget):
+    def __init__(self, navigate_home):
+        super().__init__()
+        self._navigate_home = navigate_home
+        self._build_ui()
+
+    def _build_ui(self) -> None:
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(36, 30, 36, 30)
+        layout.setSpacing(18)
+
+        header = _create_header(
+            "References/Cheat Sheets",
+            "Open field references and quick sheets.",
+        )
+        layout.addWidget(header)
+
+        panel = QWidget()
+        panel.setObjectName("contentPanel")
+        panel_layout = QVBoxLayout(panel)
+        panel_layout.setContentsMargins(18, 16, 18, 16)
+        panel_layout.setSpacing(10)
+
+        self._status_label = QLabel("Select a document to open.")
+        self._status_label.setObjectName("bodyText")
+        self._status_label.setWordWrap(True)
+
+        references = [
+            (
+                "Empirical Cheat Sheet",
+                r"c:\Users\danie\OneDrive\Desktop\Work Files\Empirical Cheat Sheet.docx",
+            ),
+            (
+                "Open Pit Book",
+                r"c:\Users\danie\OneDrive\Desktop\Work Files\Open Pit Book.pdf",
+            ),
+        ]
+
+        for label, file_path in references:
+            button = QPushButton(label)
+            button.clicked.connect(lambda _, p=file_path: self._open_reference(p))
+            panel_layout.addWidget(button)
+
+        panel_layout.addWidget(self._status_label)
+        layout.addWidget(panel)
+        layout.addStretch()
+
+        footer = QHBoxLayout()
+        footer.addWidget(_create_back_button("Back to Start Screen", self._navigate_home))
+        footer.addStretch()
+        layout.addLayout(footer)
+
+    def _open_reference(self, file_path: str) -> None:
+        path = Path(file_path)
+        if not path.exists():
+            self._status_label.setText(f"File not found: {file_path}")
+            return
+
+        opened = QDesktopServices.openUrl(QUrl.fromLocalFile(str(path)))
+        if not opened:
+            self._status_label.setText(f"Could not open: {file_path}")
+            return
+
+        self._status_label.setText(f"Opened: {path.name}")
 
 
 class PlaceholderScreen(QWidget):
