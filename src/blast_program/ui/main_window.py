@@ -1,3 +1,4 @@
+from blast_program.ui.empirical_screen import EmpiricalFormulaScreen
 from PySide6.QtWidgets import QMainWindow, QStackedWidget
 
 from blast_program.ui.gassing_screen import GassingCalculatorScreen
@@ -147,11 +148,7 @@ class MainWindow(QMainWindow):
         )
         self._register_screen(
             "empirical_formula",
-            PlaceholderScreen(
-                "Empirical Formula Calculation",
-                "Section scaffolded. We will add chemistry inputs and solver logic in a later section.",
-                self.navigate_home,
-            ),
+            EmpiricalFormulaScreen(self.navigate_home),
         )
         self._register_screen(
             "diagram_maker",
