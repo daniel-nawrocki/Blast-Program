@@ -1,5 +1,6 @@
 from PySide6.QtWidgets import QMainWindow, QStackedWidget
 
+from blast_program.ui.gassing_screen import GassingCalculatorScreen
 from blast_program.ui.screens import (
     PlaceholderScreen,
     ReferencesScreen,
@@ -53,6 +54,39 @@ class MainWindow(QMainWindow):
                 background-color: #ffffff;
                 border: 1px solid #e2e8f0;
                 border-radius: 12px;
+            }
+            QLabel[sheetHeader="true"] {
+                background-color: #e5e7eb;
+                border: 1px solid #cbd5e1;
+                color: #1f2937;
+                padding: 4px 6px;
+                font-weight: 600;
+            }
+            QLabel[sheetOutput="true"] {
+                background-color: #f8fafc;
+                border: 1px solid #cbd5e1;
+                color: #111827;
+                padding: 4px 6px;
+                min-width: 110px;
+            }
+            QDoubleSpinBox[sheetInput="true"] {
+                background-color: #ffffff;
+                border: 1px solid #9ca3af;
+                padding: 3px 6px;
+                min-width: 110px;
+            }
+            QTableWidget {
+                background-color: #ffffff;
+                gridline-color: #d1d5db;
+                border: 1px solid #cbd5e1;
+                selection-background-color: #dbeafe;
+            }
+            QHeaderView::section {
+                background-color: #e5e7eb;
+                color: #1f2937;
+                border: 1px solid #cbd5e1;
+                padding: 3px;
+                font-weight: 600;
             }
             QPushButton {
                 color: #f8fafc;
@@ -130,6 +164,10 @@ class MainWindow(QMainWindow):
         self._register_screen(
             "quick_cheat_sheets",
             ReferencesScreen(self.navigate_home),
+        )
+        self._register_screen(
+            "gassing_calculator",
+            GassingCalculatorScreen(self.navigate_home),
         )
 
     def _register_screen(self, key: str, widget) -> None:

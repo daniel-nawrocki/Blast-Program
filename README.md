@@ -2,16 +2,19 @@
 
 Section 1 scaffold for a downloadable desktop app using Python + PySide6.
 
+Note: `Gassing Calculator` now runs natively in-app (no Excel dependency).
+
 ## Included in this section
 
 - Start Screen with navigation
 - Vibration Tool menu
+- Vibration Calculator
+- Site Factor Calibrator
+- References/Cheat Sheets
+- Gassing Calculator (native workbook-style layout)
 - Placeholders for:
-  - Vibration Estimate
-  - Timing Solver
   - Empirical Formula Calculation
   - Diagram Maker
-  - Small Quick Cheat Sheets
 
 ## Local run
 
