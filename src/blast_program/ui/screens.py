@@ -45,15 +45,11 @@ def _create_header(title_text: str, subtitle_text: str) -> QWidget:
     title.setObjectName("pageTitle")
     layout.addWidget(title)
 
-    subtitle = QLabel(subtitle_text)
-    subtitle.setObjectName("pageSubtitle")
-    subtitle.setWordWrap(True)
-    layout.addWidget(subtitle)
     return header
 
 
 def _create_card_button(title_text: str, description: str, action) -> QPushButton:
-    button = QPushButton(f"{title_text}\n{description}")
+    button = QPushButton(title_text)
     button.setProperty("variant", "card")
     button.setCursor(Qt.PointingHandCursor)
     button.setMinimumHeight(92)
@@ -96,7 +92,6 @@ class StartScreen(QWidget):
             [
                 ("vibration_tool", "Vibration Tool", "Calculator and site-factor workflows."),
                 ("empirical_formula", "Empirical Formula", "Calculate formula from composition inputs."),
-                ("diagram_maker", "Diagram Maker", "Build and export process diagrams."),
                 ("quick_cheat_sheets", "References/Cheat Sheets", "Open compact references and key values."),
                 ("gassing_calculator", "Gassing Calculator", "Workbook-backed calculation workflow."),
             ]
